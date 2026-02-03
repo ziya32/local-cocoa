@@ -315,6 +315,75 @@ export interface EmailMessageContent extends EmailMessageSummary {
     markdown: string;
 }
 
+// Account-Level Email Memory Types (memory-v2.5)
+export interface AccountMemoryStatus {
+    accountId: string;
+    isBuilt: boolean;
+    memcellCount: number;
+    episodeCount: number;
+    eventLogCount: number;
+    lastBuiltAt?: string | null;
+}
+
+export interface BuildAccountMemoryResult {
+    success: boolean;
+    message: string;
+    accountId: string;
+    totalMessages: number;
+    memcellsCreated: number;
+    episodesCreated: number;
+    eventLogsCreated: number;
+}
+
+export interface AccountQAResult {
+    answer: string;
+    sources: AccountQASource[];
+    accountId: string;
+    memoriesUsed: number;
+}
+
+export interface AccountQASource {
+    type: 'email_memory';
+    id: string;
+    subject?: string;
+    sender?: string;
+}
+
+export interface MemCellItem {
+    id: string;
+    emailSubject: string;
+    emailSender?: string | null;
+    preview?: string | null;
+    timestamp?: string | null;
+}
+
+export interface EpisodeItem {
+    id: string;
+    memcellId?: string | null;
+    emailSubject?: string | null;
+    summary: string;
+    episode?: string | null;
+    timestamp?: string | null;
+}
+
+export interface FactItem {
+    id: string;
+    episodeId?: string | null;
+    emailSubject?: string | null;
+    fact: string;
+    timestamp?: string | null;
+}
+
+export interface AccountMemoryDetails {
+    accountId: string;
+    memcells: MemCellItem[];
+    episodes: EpisodeItem[];
+    facts: FactItem[];
+    totalMemcells: number;
+    totalEpisodes: number;
+    totalFacts: number;
+}
+
 export interface NoteSummary {
     id: string;
     title: string;

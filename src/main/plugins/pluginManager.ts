@@ -40,8 +40,7 @@ export class PluginManager extends EventEmitter {
         uiEntries: new Map()
     };
     
-    private pluginsPath: string;
-    private userPluginsPath: string | null = null;
+    private systemPluginsRoot: string;
     private userDataPath: string;
     private pluginViews: Map<string, BrowserView> = new Map();
     private pluginStorage: Map<string, Record<string, unknown>> = new Map();
@@ -52,14 +51,7 @@ export class PluginManager extends EventEmitter {
         super();
         this.userDataPath = config.paths.runtimeRoot;
     
-        this.pluginsPath = path.join( config.paths.resourceRoot, PLUGINS_DIR);
-        
-        // Ensure system plugins directory exists. Use plugins folder doesn't need to initialize since it is external
-        if (!fs.existsSync(this.pluginsPath)) {
-            console.warn(`[PluginManager] System plugins directory does not exist: ${this.pluginsPath}`);
-            // Create it if missing (though it should exist in the project)
-            fs.mkdirSync(this.pluginsPath, { recursive: true });
-        }
+        this.systemPluginsRoot = path.join( config.paths.resourceRoot, PLUGINS_DIR);
         
         // Load plugin storage
         this.loadStorage();
@@ -146,12 +138,12 @@ export class PluginManager extends EventEmitter {
         console.log('[PluginManager] Initializing plugin system...');
         
         // Discover system plugins
-        await this.discoverPlugins(this.pluginsPath);
+        await this.discoverPlugins(this.systemPluginsRoot);
 
-        // Discover user plugins if directory is specified
-        if (this.userPluginsPath) {
-            console.log(`[PluginManager] Discovering user plugins from: ${this.userPluginsPath}`);
-            await this.discoverPlugins(this.userPluginsPath);
+        // Discover user plugins if directory is specified. User plugins root uses absolute path
+        if (config.paths.userPluginsRoot) {
+            console.log(`[PluginManager] Discovering user plugins from: ${config.paths.userPluginsRoot}`);
+            await this.discoverPlugins(config.paths.userPluginsRoot);
         }
         
         // Load plugins config (syncs with discovered plugins)
@@ -396,6 +388,7 @@ export class PluginManager extends EventEmitter {
     }
     
     /**
+     * TODO:
      * Install a plugin from a .zip file
      */
     async installPlugin(zipPath: string): Promise<{ success: boolean; pluginId?: string; error?: string }> {
@@ -425,9 +418,8 @@ export class PluginManager extends EventEmitter {
                 return { success: false, error: `Plugin ${manifest.id} is already installed` };
             }
             
-            // Create plugin directory
-            // Use userPluginsPath if available, otherwise fallback to system pluginsPath
-            const targetBaseDir = this.userPluginsPath || this.pluginsPath;
+            // Create plugin directory. System plugins should be read only. So installable plugins should use userPluginsRoot
+            const targetBaseDir = config.paths.userPluginsRoot;
             const pluginDir = path.join(targetBaseDir, manifest.id);
             if (fs.existsSync(pluginDir)) {
                 fs.rmSync(pluginDir, { recursive: true });
@@ -641,19 +633,8 @@ export class PluginManager extends EventEmitter {
         // Clear registry
         this.registry.plugins.clear();
         this.registry.uiEntries.clear();
-        
-        // Rediscover
-        await this.discoverPlugins(this.pluginsPath);
-        if (this.userPluginsPath) {
-            await this.discoverPlugins(this.userPluginsPath);
-        }
-        
-        // Reload all
-        for (const [pluginId, plugin] of this.registry.plugins) {
-            if (plugin.status === 'installed') {
-                await this.loadPlugin(pluginId);
-            }
-        }
+
+        this.initialize();
         
         // Notify frontend
         if (this.mainWindow && !this.mainWindow.isDestroyed()) {

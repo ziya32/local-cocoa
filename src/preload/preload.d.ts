@@ -4,6 +4,10 @@ import type {
     EmailMessageContent,
     EmailMessageSummary,
     EmailSyncResult,
+    AccountMemoryStatus,
+    AccountMemoryDetails,
+    BuildAccountMemoryResult,
+    AccountQAResult,
     FileListResponse,
     FolderRecord,
     HealthStatus,
@@ -76,6 +80,11 @@ declare global {
             syncEmailAccount: (accountId: string, limit?: number) => Promise<EmailSyncResult>;
             listEmailMessages: (accountId: string, limit?: number) => Promise<EmailMessageSummary[]>;
             getEmailMessage: (messageId: string) => Promise<EmailMessageContent>;
+            // Account-Level Email Memory API (memory-v2.5)
+            buildAccountMemory: (accountId: string, userId?: string) => Promise<BuildAccountMemoryResult>;
+            getAccountMemoryStatus: (accountId: string, userId?: string) => Promise<AccountMemoryStatus>;
+            getAccountMemoryDetails: (accountId: string, userId?: string, limit?: number) => Promise<AccountMemoryDetails>;
+            accountQA: (accountId: string, question: string, userId?: string) => Promise<AccountQAResult>;
             listNotes: () => Promise<NoteSummary[]>;
             createNote: (payload: NoteDraftPayload) => Promise<NoteSummary>;
             getNote: (noteId: string) => Promise<NoteContent>;

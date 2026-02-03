@@ -374,7 +374,7 @@ export function UserMemory() {
     useEffect(() => {
         if (activeTab === 'overview') {
             void fetchSummary();
-            void fetchEventLogs(5, 0);
+            void loadCachedProfile(); // Also load basic profile for overview
         } else if (activeTab === 'basic-profile') {
             // Load cached profile when tab opens (doesn't regenerate)
             void loadCachedProfile();
@@ -638,33 +638,6 @@ export function UserMemory() {
         return filtered;
     }, [episodes, eventLogs, foresights, episodesById, searchTerm, timeRange, sortOrder]);
 
-    const recentEpisodes = useMemo(() => {
-        const items = summary?.recent_episodes ?? [];
-        return items.filter(ep => {
-            const text = `${ep.subject ?? ''} ${ep.summary ?? ''}`;
-            return matchesSearch(text) && inTimeRange(ep.timestamp);
-        });
-    }, [summary, searchTerm, timeRange]);
-
-    const recentForesights = useMemo(() => {
-        const items = summary?.recent_foresights ?? [];
-        return items.filter(fs => {
-            const parent = fs.parent_episode_id ? episodesById.get(fs.parent_episode_id) : undefined;
-            const text = `${fs.content ?? ''} ${fs.evidence ?? ''} ${parent?.subject ?? ''}`;
-            const timestamp = parent?.timestamp;
-            return matchesSearch(text) && inTimeRange(timestamp);
-        });
-    }, [summary, episodesById, searchTerm, timeRange]);
-
-    const recentEvents = useMemo(() => {
-        const items = eventLogs.slice(0, 5);
-        return items.filter(log => {
-            const parent = log.parent_episode_id ? episodesById.get(log.parent_episode_id) : undefined;
-            const text = `${log.atomic_fact ?? ''} ${parent?.subject ?? ''}`;
-            return matchesSearch(text) && inTimeRange(log.timestamp);
-        });
-    }, [eventLogs, episodesById, searchTerm, timeRange]);
-
     useEffect(() => {
         if (activeTab !== 'episodes' || !focusedEpisodeId) return;
         setExpandedIds(prev => {
@@ -889,178 +862,160 @@ export function UserMemory() {
                             </button>
                         </div>
 
-                        <div className="grid gap-4 lg:grid-cols-3">
-                            {/* Profile */}
-                            <div className="rounded-xl border bg-card shadow-sm lg:col-span-2">
-                                <div className="border-b px-4 py-3">
-                                    <h3 className="font-semibold">{t('memory.profile.title')}</h3>
-                                </div>
-                                <div className="p-4">
-                                    {summary?.profile ? (
-                                        <div className="space-y-4">
-                                            <div className="flex items-center justify-between">
-                                                <div>
-                                                    <p className="text-lg font-semibold">
-                                                        {summary.profile.user_name || 'User'}
-                                                    </p>
-                                                    <p className="text-xs text-muted-foreground">
-                                                        {summary.profile.user_id}
-                                                    </p>
-                                                </div>
-                                                <div className="rounded-full border bg-muted/40 px-3 py-1 text-xs text-muted-foreground">
-                                                    {t('memory.profile.memory')}
-                                                </div>
-                                            </div>
-                                            <div className="grid gap-3 md:grid-cols-2">
-                                                <div>
-                                                    <p className="text-xs font-semibold uppercase text-muted-foreground">{t('memory.profile.personality')}</p>
-                                                    <div className="mt-2 flex flex-wrap gap-2">
-                                                        {(summary.profile.personality ?? []).length > 0 ? (
-                                                            summary.profile.personality?.map(item => (
-                                                                <span key={item} className="rounded-full border px-2 py-0.5 text-xs">
-                                                                    {item}
-                                                                </span>
-                                                            ))
-                                                        ) : (
-                                                            <span className="text-xs text-muted-foreground">{t('memory.profile.noPersonality')}</span>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                                <div>
-                                                    <p className="text-xs font-semibold uppercase text-muted-foreground">{t('memory.profile.interests')}</p>
-                                                    <div className="mt-2 flex flex-wrap gap-2">
-                                                        {(summary.profile.interests ?? []).length > 0 ? (
-                                                            summary.profile.interests?.map(item => (
-                                                                <span key={item} className="rounded-full border px-2 py-0.5 text-xs">
-                                                                    {item}
-                                                                </span>
-                                                            ))
-                                                        ) : (
-                                                            <span className="text-xs text-muted-foreground">{t('memory.profile.noInterests')}</span>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                                <div>
-                                                    <p className="text-xs font-semibold uppercase text-muted-foreground">{t('memory.profile.hardSkills')}</p>
-                                                    <div className="mt-2 flex flex-wrap gap-2">
-                                                        {(summary.profile.hard_skills ?? []).length > 0 ? (
-                                                            summary.profile.hard_skills?.map(skill => (
-                                                                <span key={`${skill.name}-${skill.level}`} className="rounded-full border px-2 py-0.5 text-xs">
-                                                                    {skill.name} {skill.level ? `(${skill.level})` : ''}
-                                                                </span>
-                                                            ))
-                                                        ) : (
-                                                            <span className="text-xs text-muted-foreground">{t('memory.profile.noHardSkills')}</span>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                                <div>
-                                                    <p className="text-xs font-semibold uppercase text-muted-foreground">{t('memory.profile.softSkills')}</p>
-                                                    <div className="mt-2 flex flex-wrap gap-2">
-                                                        {(summary.profile.soft_skills ?? []).length > 0 ? (
-                                                            summary.profile.soft_skills?.map(skill => (
-                                                                <span key={`${skill.name}-${skill.level}`} className="rounded-full border px-2 py-0.5 text-xs">
-                                                                    {skill.name} {skill.level ? `(${skill.level})` : ''}
-                                                                </span>
-                                                            ))
-                                                        ) : (
-                                                            <span className="text-xs text-muted-foreground">{t('memory.profile.noSoftSkills')}</span>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-                                            {t('memory.profile.noProfile')}
-                                        </div>
-                                    )}
+                        {/* Identity Card Section */}
+                        {basicProfileLoading && !basicProfile && loadingTopics.size === 0 ? (
+                            /* Loading state */
+                            <div className="rounded-xl border bg-card p-6 shadow-sm">
+                                <div className="flex flex-col items-center justify-center py-8 gap-4">
+                                    <RefreshCw className="h-8 w-8 animate-spin text-primary" />
+                                    <p className="text-sm text-muted-foreground">
+                                        {t('memory.basicProfile.analyzing', 'Analyzing your system and inferring profile...')}
+                                    </p>
                                 </div>
                             </div>
-
-                            {/* Recent Events */}
-                            <div className="rounded-xl border bg-card shadow-sm">
-                                <div className="border-b px-4 py-3">
-                                    <h3 className="font-semibold">{t('memory.recent.events')}</h3>
-                                </div>
-                                <div className="p-4">
-                                    {recentEvents.length > 0 ? (
-                                        <div className="space-y-3">
-                                            {recentEvents.map(log => {
-                                                const parent = log.parent_episode_id ? episodesById.get(log.parent_episode_id) : undefined;
+                        ) : basicProfile ? (
+                            <div className="rounded-xl border bg-gradient-to-br from-card via-card to-accent/10 shadow-lg overflow-hidden">
+                                {/* Identity Card Header */}
+                                <div className="p-6 pb-4">
+                                    <div className="flex items-start gap-4">
+                                        <div className="rounded-full bg-primary/10 p-4 ring-2 ring-primary/20">
+                                            <span className="text-4xl">👤</span>
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <h3 className="text-2xl font-bold truncate">{basicProfile.user_name || basicProfile.user_id}</h3>
+                                            <p className="text-sm text-muted-foreground mt-1">
+                                                {basicProfile.raw_system_data?.computer_name}
+                                            </p>
+                                            {/* Inferred Roles as Tags */}
+                                            {(() => {
+                                                const workTopic = basicProfile.topics?.find(t => t.topic_id === 'work');
+                                                const roles = workTopic?.subtopics?.find(s => s.name === 'inferred_roles' || s.name === 'role')?.value;
+                                                const roleArray = Array.isArray(roles) ? roles.slice(0, 3) : (roles ? [roles] : []);
+                                                if (roleArray.length === 0) return null;
                                                 return (
-                                                    <div key={log.id} className="rounded-lg border p-3">
-                                                        <p className="text-sm">{log.atomic_fact}</p>
-                                                        <p className="mt-1 text-xs text-muted-foreground">
-                                                            {formatDate(log.timestamp)}
-                                                            {parent?.subject ? ` • ${parent.subject}` : ''}
-                                                        </p>
+                                                    <div className="flex flex-wrap gap-2 mt-3">
+                                                        {roleArray.map((role, i) => (
+                                                            <span key={i} className="rounded-full bg-primary/10 border border-primary/20 px-3 py-1 text-xs font-medium text-primary">
+                                                                {String(role)}
+                                                            </span>
+                                                        ))}
                                                     </div>
                                                 );
-                                            })}
+                                            })()}
                                         </div>
-                                    ) : (
-                                        <p className="text-sm text-muted-foreground text-center py-8">
-                                            {t('memory.recent.noEvents')}
-                                        </p>
-                                    )}
+                                        <button
+                                            onClick={() => setActiveTab('basic-profile')}
+                                            className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+                                        >
+                                            {t('memory.overview.viewDetails', 'View Details')}
+                                            <ChevronRight className="h-3 w-3" />
+                                        </button>
+                                    </div>
                                 </div>
-                            </div>
-                        </div>
 
-                        <div className="grid gap-4 lg:grid-cols-2">
-                            {/* Recent Episodes */}
-                            <div className="rounded-xl border bg-card shadow-sm">
-                                <div className="border-b px-4 py-3">
-                                    <h3 className="font-semibold">{t('memory.recent.episodes')}</h3>
-                                </div>
-                                <div className="p-4">
-                                    {recentEpisodes.length > 0 ? (
-                                        <div className="space-y-3">
-                                            {recentEpisodes.map(ep => (
-                                                <div key={ep.id} className="rounded-lg border p-3">
-                                                    <p className="text-sm font-medium">{ep.summary}</p>
-                                                    <p className="text-xs text-muted-foreground mt-1">
-                                                        {formatDate(ep.timestamp)}
-                                                    </p>
+                                {/* Skills & Interests Section */}
+                                <div className="px-6 pb-6 space-y-4">
+                                    {/* Technical Skills */}
+                                    {(() => {
+                                        const techTopic = basicProfile.topics?.find(t => t.topic_id === 'technical');
+                                        const skills = techTopic?.subtopics?.find(s => 
+                                            s.name === 'programming_languages' || s.name === 'hard_skills' || s.name === 'skills'
+                                        )?.value;
+                                        const skillArray = Array.isArray(skills) ? skills.slice(0, 8) : [];
+                                        if (skillArray.length === 0) return null;
+                                        return (
+                                            <div>
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <span className="text-sm">💻</span>
+                                                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                                                        {t('memory.overview.skills', 'Skills')}
+                                                    </span>
                                                 </div>
-                                            ))}
-                                        </div>
-                                    ) : (
-                                        <p className="text-sm text-muted-foreground text-center py-8">
-                                            {t('memory.recent.noEpisodes')}
-                                        </p>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Recent Foresights */}
-                            <div className="rounded-xl border bg-card shadow-sm">
-                                <div className="border-b px-4 py-3">
-                                    <h3 className="font-semibold">{t('memory.recent.foresights')}</h3>
-                                </div>
-                                <div className="p-4">
-                                    {recentForesights.length > 0 ? (
-                                        <div className="space-y-3">
-                                            {recentForesights.map(fs => (
-                                                <div key={fs.id} className="rounded-lg border p-3">
-                                                    <p className="text-sm">{fs.content}</p>
-                                                    {fs.evidence && (
-                                                        <p className="text-xs text-muted-foreground mt-1">
-                                                            {t('memory.foresight.evidence')}: {fs.evidence}
-                                                        </p>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {skillArray.map((skill, i) => {
+                                                        const skillName = typeof skill === 'object' ? (skill.skill || skill.name) : skill;
+                                                        return (
+                                                            <span key={i} className="rounded-full bg-amber-500/10 border border-amber-500/20 px-3 py-1 text-xs font-medium text-amber-600 dark:text-amber-400">
+                                                                {String(skillName)}
+                                                            </span>
+                                                        );
+                                                    })}
+                                                    {Array.isArray(skills) && skills.length > 8 && (
+                                                        <span className="text-xs text-muted-foreground self-center">+{skills.length - 8} more</span>
                                                     )}
                                                 </div>
-                                            ))}
+                                            </div>
+                                        );
+                                    })()}
+
+                                    {/* Interests */}
+                                    {(() => {
+                                        const interestTopic = basicProfile.topics?.find(t => t.topic_id === 'interest');
+                                        const interests = interestTopic?.subtopics?.find(s => 
+                                            s.name === 'hobbies' || s.name === 'interests' || s.name === 'topics_of_interest'
+                                        )?.value;
+                                        const interestArray = Array.isArray(interests) ? interests.slice(0, 6) : [];
+                                        if (interestArray.length === 0) return null;
+                                        return (
+                                            <div>
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <span className="text-sm">💡</span>
+                                                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                                                        {t('memory.overview.interests', 'Interests')}
+                                                    </span>
+                                                </div>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {interestArray.map((interest, i) => (
+                                                        <span key={i} className="rounded-full bg-pink-500/10 border border-pink-500/20 px-3 py-1 text-xs font-medium text-pink-600 dark:text-pink-400">
+                                                            {String(interest)}
+                                                        </span>
+                                                    ))}
+                                                    {Array.isArray(interests) && interests.length > 6 && (
+                                                        <span className="text-xs text-muted-foreground self-center">+{interests.length - 6} more</span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    })()}
+                                </div>
+
+                                {/* System Info Footer */}
+                                {basicProfile.raw_system_data && (
+                                    <div className="px-6 py-3 bg-muted/30 border-t flex items-center justify-between text-xs text-muted-foreground">
+                                        <div className="flex items-center gap-4">
+                                            <span className="flex items-center gap-1">
+                                                {basicProfile.raw_system_data.appearance === 'dark' ? '🌙' : '☀️'}
+                                                <span className="capitalize">{basicProfile.raw_system_data.appearance}</span>
+                                            </span>
+                                            <span className="flex items-center gap-1">
+                                                ⌨️ <span className="font-mono">{basicProfile.raw_system_data.shell?.split('/').pop()}</span>
+                                            </span>
+                                            <span className="flex items-center gap-1">
+                                                🌍 {basicProfile.raw_system_data.timezone}
+                                            </span>
                                         </div>
-                                    ) : (
-                                        <p className="text-sm text-muted-foreground text-center py-8">
-                                            {t('memory.recent.noForesights')}
-                                        </p>
-                                    )}
+                                        <span>{t('memory.overview.lastScanned', 'Last scanned')}: {new Date(basicProfile.scanned_at).toLocaleDateString()}</span>
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                            /* No profile yet - show generate hint */
+                            <div className="rounded-xl border bg-card p-6 shadow-sm">
+                                <div className="text-center text-muted-foreground">
+                                    <Brain className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                                    <p className="text-sm">
+                                        {t('memory.overview.noProfile', 'No profile generated yet. Go to Basic Profile tab to generate your AI-inferred profile.')}
+                                    </p>
+                                    <button
+                                        onClick={() => setActiveTab('basic-profile')}
+                                        className="mt-4 inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+                                    >
+                                        <User className="h-4 w-4" />
+                                        {t('memory.overview.generateProfile', 'Generate Profile')}
+                                    </button>
                                 </div>
                             </div>
-                        </div>
+                        )}
                     </div>
                 )}
 

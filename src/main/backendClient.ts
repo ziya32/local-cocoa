@@ -948,6 +948,185 @@ export async function getEmailMessage(messageId: string): Promise<EmailMessageCo
     return mapEmailMessageContent(data);
 }
 
+// ==================== Account-Level Email Memory API (memory-v2.5) ====================
+
+export interface AccountMemoryStatus {
+    accountId: string;
+    isBuilt: boolean;
+    memcellCount: number;
+    episodeCount: number;
+    eventLogCount: number;
+    lastBuiltAt?: string | null;
+}
+
+export interface BuildAccountMemoryResult {
+    success: boolean;
+    message: string;
+    accountId: string;
+    totalMessages: number;
+    memcellsCreated: number;
+    episodesCreated: number;
+    eventLogsCreated: number;
+}
+
+export interface AccountQAResult {
+    answer: string;
+    sources: Array<{
+        type: 'email_memory';
+        id: string;
+        subject?: string;
+        sender?: string;
+    }>;
+    accountId: string;
+    memoriesUsed: number;
+}
+
+// ==================== Account-Level Memory Functions (v2.5) ====================
+
+export async function buildAccountMemory(
+    accountId: string, 
+    userId: string = 'default_user'
+): Promise<BuildAccountMemoryResult> {
+    const data = await requestJson<any>(
+        `${MAIL_PLUGIN_PREFIX}/accounts/${encodeURIComponent(accountId)}/build-memory`,
+        {
+            method: 'POST',
+            body: JSON.stringify({
+                user_id: userId
+            })
+        }
+    );
+    return {
+        success: data.success ?? false,
+        message: data.message ?? '',
+        accountId: data.account_id ?? accountId,
+        totalMessages: data.total_messages ?? 0,
+        memcellsCreated: data.memcells_created ?? 0,
+        episodesCreated: data.episodes_created ?? 0,
+        eventLogsCreated: data.event_logs_created ?? 0,
+    };
+}
+
+export async function getAccountMemoryStatus(
+    accountId: string, 
+    userId: string = 'default_user'
+): Promise<AccountMemoryStatus> {
+    const url = new URL(resolveEndpoint(`${MAIL_PLUGIN_PREFIX}/accounts/${encodeURIComponent(accountId)}/memory-status`));
+    url.searchParams.set('user_id', userId);
+    const data = await requestJson<any>(url.toString(), { method: 'GET' });
+    return {
+        accountId: data.account_id ?? accountId,
+        isBuilt: data.is_built ?? false,
+        memcellCount: data.memcell_count ?? 0,
+        episodeCount: data.episode_count ?? 0,
+        eventLogCount: data.event_log_count ?? 0,
+        lastBuiltAt: data.last_built_at ?? null,
+    };
+}
+
+export async function accountQA(
+    accountId: string,
+    question: string,
+    userId: string = 'default_user'
+): Promise<AccountQAResult> {
+    const data = await requestJson<any>(
+        `${MAIL_PLUGIN_PREFIX}/accounts/${encodeURIComponent(accountId)}/qa`,
+        {
+            method: 'POST',
+            body: JSON.stringify({
+                question,
+                user_id: userId
+            })
+        }
+    );
+    return {
+        answer: data.answer ?? '',
+        sources: (data.sources ?? []).map((s: any) => ({
+            type: s.type ?? 'email_memory',
+            id: s.id ?? '',
+            subject: s.subject ?? '',
+            sender: s.sender ?? '',
+        })),
+        accountId: data.account_id ?? accountId,
+        memoriesUsed: data.memories_used ?? 0,
+    };
+}
+
+export interface MemCellItem {
+    id: string;
+    emailSubject: string;
+    emailSender?: string | null;
+    preview?: string | null;
+    timestamp?: string | null;
+}
+
+export interface EpisodeItem {
+    id: string;
+    memcellId?: string | null;
+    emailSubject?: string | null;
+    summary: string;
+    episode?: string | null;
+    timestamp?: string | null;
+}
+
+export interface FactItem {
+    id: string;
+    episodeId?: string | null;
+    emailSubject?: string | null;
+    fact: string;
+    timestamp?: string | null;
+}
+
+export interface AccountMemoryDetails {
+    accountId: string;
+    memcells: MemCellItem[];
+    episodes: EpisodeItem[];
+    facts: FactItem[];
+    totalMemcells: number;
+    totalEpisodes: number;
+    totalFacts: number;
+}
+
+export async function getAccountMemoryDetails(
+    accountId: string,
+    userId: string = 'default_user',
+    limit: number = 50
+): Promise<AccountMemoryDetails> {
+    const url = new URL(resolveEndpoint(`${MAIL_PLUGIN_PREFIX}/accounts/${encodeURIComponent(accountId)}/memory-details`));
+    url.searchParams.set('user_id', userId);
+    url.searchParams.set('limit', String(limit));
+    const data = await requestJson<any>(url.toString(), { method: 'GET' });
+    console.log('[backendClient] getAccountMemoryDetails raw response:', JSON.stringify(data, null, 2).substring(0, 1000));
+    return {
+        accountId: data.account_id ?? accountId,
+        memcells: (data.memcells ?? []).map((mc: any) => ({
+            id: mc.id ?? '',
+            emailSubject: mc.email_subject ?? '(No Subject)',
+            emailSender: mc.email_sender ?? null,
+            preview: mc.preview ?? null,
+            timestamp: mc.timestamp ?? null,
+        })),
+        episodes: (data.episodes ?? []).map((ep: any) => ({
+            id: ep.id ?? '',
+            memcellId: ep.memcell_id ?? null,
+            emailSubject: ep.email_subject ?? null,
+            summary: ep.summary ?? '',
+            episode: ep.episode ?? null,
+            timestamp: ep.timestamp ?? null,
+        })),
+        facts: (data.facts ?? []).map((f: any) => ({
+            id: f.id ?? '',
+            episodeId: f.episode_id ?? null,
+            emailSubject: f.email_subject ?? null,
+            fact: f.fact ?? '',
+            timestamp: f.timestamp ?? null,
+        })),
+        totalMemcells: data.total_memcells ?? 0,
+        totalEpisodes: data.total_episodes ?? 0,
+        totalFacts: data.total_facts ?? 0,
+    };
+}
+
 export async function searchFiles(query: string, limit = 10): Promise<SearchResponse> {
     const trimmed = query?.trim() ?? '';
     if (!trimmed) {

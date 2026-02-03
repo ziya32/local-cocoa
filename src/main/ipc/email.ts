@@ -8,7 +8,11 @@ import {
     getEmailMessage,
     startOutlookAuth,
     getOutlookAuthStatus,
-    completeOutlookSetup
+    completeOutlookSetup,
+    buildAccountMemory,
+    getAccountMemoryStatus,
+    getAccountMemoryDetails,
+    accountQA
 } from '../backendClient';
 import { EmailAccountPayload } from '../types';
 
@@ -64,5 +68,56 @@ export function registerEmailHandlers() {
             throw new Error('Missing email message id.');
         }
         return getEmailMessage(messageId);
+    });
+
+    // ==================== Account-Level Memory Handlers (memory-v2.5) ====================
+
+    ipcMain.handle('email:build-account-memory', async (_event, payload: { 
+        accountId: string; 
+        userId?: string; 
+    }) => {
+        const accountId = payload?.accountId;
+        if (!accountId) {
+            throw new Error('Missing email account id.');
+        }
+        return buildAccountMemory(accountId, payload.userId);
+    });
+
+    ipcMain.handle('email:account-memory-status', async (_event, payload: { 
+        accountId: string; 
+        userId?: string;
+    }) => {
+        const accountId = payload?.accountId;
+        if (!accountId) {
+            throw new Error('Missing email account id.');
+        }
+        return getAccountMemoryStatus(accountId, payload.userId);
+    });
+
+    ipcMain.handle('email:account-memory-details', async (_event, payload: { 
+        accountId: string; 
+        userId?: string;
+        limit?: number;
+    }) => {
+        const accountId = payload?.accountId;
+        if (!accountId) {
+            throw new Error('Missing email account id.');
+        }
+        return getAccountMemoryDetails(accountId, payload.userId, payload.limit);
+    });
+
+    ipcMain.handle('email:account-qa', async (_event, payload: { 
+        accountId: string; 
+        question: string;
+        userId?: string;
+    }) => {
+        const accountId = payload?.accountId;
+        if (!accountId) {
+            throw new Error('Missing email account id.');
+        }
+        if (!payload.question) {
+            throw new Error('Missing question.');
+        }
+        return accountQA(accountId, payload.question, payload.userId);
     });
 }

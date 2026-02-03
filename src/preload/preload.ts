@@ -6,6 +6,10 @@ import type {
     EmailMessageContent,
     EmailMessageSummary,
     EmailSyncResult,
+    AccountMemoryStatus,
+    AccountMemoryDetails,
+    BuildAccountMemoryResult,
+    AccountQAResult,
     FileListResponse,
     FileRecord,
     FolderRecord,
@@ -152,6 +156,15 @@ const api = {
         ipcRenderer.invoke('email:messages', { accountId, limit }),
     getEmailMessage: (messageId: string): Promise<EmailMessageContent> =>
         ipcRenderer.invoke('email:message', { messageId }),
+    // Account-Level Email Memory API (memory-v2.5)
+    buildAccountMemory: (accountId: string, userId?: string): Promise<BuildAccountMemoryResult> =>
+        ipcRenderer.invoke('email:build-account-memory', { accountId, userId }),
+    getAccountMemoryStatus: (accountId: string, userId?: string): Promise<AccountMemoryStatus> =>
+        ipcRenderer.invoke('email:account-memory-status', { accountId, userId }),
+    getAccountMemoryDetails: (accountId: string, userId?: string, limit?: number): Promise<AccountMemoryDetails> =>
+        ipcRenderer.invoke('email:account-memory-details', { accountId, userId, limit }),
+    accountQA: (accountId: string, question: string, userId?: string): Promise<AccountQAResult> =>
+        ipcRenderer.invoke('email:account-qa', { accountId, question, userId }),
     listNotes: (): Promise<NoteSummary[]> => ipcRenderer.invoke('notes:list'),
     createNote: (payload: NoteDraftPayload): Promise<NoteSummary> =>
         ipcRenderer.invoke('notes:create', payload),

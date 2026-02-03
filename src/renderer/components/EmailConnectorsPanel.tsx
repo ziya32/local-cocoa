@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Mail, Trash2, RefreshCw, AlertCircle, CheckCircle2, Copy, ExternalLink, Plus, X } from 'lucide-react';
+import { Mail, Trash2, RefreshCw, AlertCircle, CheckCircle2, Copy, ExternalLink, Plus, X, Brain, Sparkles } from 'lucide-react';
 import { cn } from '../lib/utils';
-import type { EmailAccountPayload, EmailAccountSummary, IndexingItem } from '../types';
+import type { EmailAccountPayload, EmailAccountSummary, IndexingItem, AccountMemoryStatus } from '../types';
 
 interface EmailSyncState {
     status: 'idle' | 'syncing' | 'ok' | 'error';
@@ -62,6 +62,32 @@ export function EmailConnectorsPanel({
     const [form, setForm] = useState<FormState>({ ...DEFAULT_FORM });
     const [error, setError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    
+    // Memory Status State
+    const [memoryStatuses, setMemoryStatuses] = useState<Record<string, AccountMemoryStatus>>({});
+
+    // Fetch memory status for all accounts on mount and when accounts change
+    useEffect(() => {
+        const fetchAllMemoryStatuses = async () => {
+            const api = window.api;
+            if (!api?.getAccountMemoryStatus) return;
+            
+            const statuses: Record<string, AccountMemoryStatus> = {};
+            for (const account of accounts) {
+                try {
+                    const status = await api.getAccountMemoryStatus(account.id);
+                    statuses[account.id] = status;
+                } catch (e) {
+                    console.error(`Failed to fetch memory status for ${account.id}:`, e);
+                }
+            }
+            setMemoryStatuses(statuses);
+        };
+        
+        if (accounts.length > 0) {
+            fetchAllMemoryStatuses();
+        }
+    }, [accounts]);
 
     // Outlook State
     const [outlookClientId] = useState('f0f434e5-80fb-4db9-823c-36707ec98470');
@@ -669,6 +695,24 @@ export function EmailConnectorsPanel({
                                             </>
                                         )}
                                     </span>
+                                </div>
+                                
+                                {/* Memory Status */}
+                                <div className="flex items-center justify-between text-sm pt-2 border-t">
+                                    <span className="text-muted-foreground flex items-center gap-1.5">
+                                        <Brain className="h-3.5 w-3.5" />
+                                        Memory
+                                    </span>
+                                    {memoryStatuses[account.id]?.isBuilt ? (
+                                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400">
+                                            <Sparkles className="h-3 w-3" />
+                                            {memoryStatuses[account.id].memcellCount} indexed
+                                        </span>
+                                    ) : (
+                                        <span className="text-xs text-muted-foreground">
+                                            Not built
+                                        </span>
+                                    )}
                                 </div>
                             </div>
 

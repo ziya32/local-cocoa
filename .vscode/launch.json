@@ -12,7 +12,14 @@
               "dev:electron"
           ],
           "env": { // Overwrite env variables
-              "LOCAL_RUNTIME_ROOT": "${workspaceFolder}/runtime"
+              "LOCAL_RUNTIME_ROOT": "${workspaceFolder}/runtime",
+              "LOCAL_SERVICE_LAUNCH_PYTHON_SERVER": "true",
+              "DEBUG": "true",
+              "PYTHONUNBUFFERED": "1",
+              "PYDEVD_DISABLE_FILE_VALIDATION": "1",
+              "DEBUGPY_PYTHON_PATH": "${workspaceFolder}\\.venv\\Scripts\\python.exe",
+              "LOCAL_SERVICE_DEBUG_WAIT": "false",   // enable if you need to debug python server startup
+              "LOCAL_SERVICE_DEBUG_PORT": ""         // use 5678 if you nened to attach debug
           },
           "console": "integratedTerminal",
           "autoAttachChildProcesses": true,

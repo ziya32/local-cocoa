@@ -16,7 +16,9 @@ const projectRoot = path.resolve(__dirname, '../..');
 // In production, use Electron's userData path
 //    Mac:  ~/Library/Application Support/Local Cocoa/
 //    Win:  c:/Users/<user name>/AppData/Roaming/Local Cocoa/
-const runtimeRoot = isDev ? path.join(projectRoot, 'runtime') : app.getPath('userData');
+const runtimeRoot = process.env.LOCAL_RUNTIME_ROOT 
+    ? path.resolve(process.env.LOCAL_RUNTIME_ROOT) 
+    : (isDev ? path.join(projectRoot, 'runtime') : app.getPath('userData'));
 
 // Resource root directory, all static (read-only) data files are stored here.
 const resourceRoot = isDev ? projectRoot : process.resourcesPath;
